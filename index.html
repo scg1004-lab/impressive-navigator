@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Impressive Punta Cana · Navigator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand: #F5ECD7; --sand-light: #FBF6EC; --taupe: #C4A882; --taupe-dark: #8B7355;
+    --burgundy: #7A2E3C; --tropical: #2D6A4F; --turquoise: #1A7A8A;
+    --turquoise-light: #4DAAB8; --dark: #1C1A18; --text: #3D3830;
+    --text-muted: #8B7F72; --white: #FFFFFF;
+    --shadow: 0 8px 32px rgba(28,26,24,0.15); --shadow-sm: 0 2px 12px rgba(28,26,24,0.1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--dark); color:var(--text); height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* HEADER */
+  .header { background:var(--dark); padding:12px 16px 10px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; z-index:100; }
+  .logo-main { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:300; color:var(--sand); letter-spacing:0.08em; line-height:1; }
+  .logo-sub { font-size:9px; color:var(--taupe); letter-spacing:0.2em; text-transform:uppercase; margin-top:2px; }
+  .header-badge { display:flex; align-items:center; gap:6px; background:rgba(77,170,184,0.15); border:1px solid rgba(77,170,184,0.3); border-radius:20px; padding:5px 10px; }
+  .badge-dot { width:6px; height:6px; border-radius:50%; background:var(--turquoise-light); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+  .badge-text { font-size:10px; color:var(--turquoise-light); letter-spacing:0.06em; font-weight:500; }
+
+  /* SEARCH */
+  .search-wrap { padding:10px 14px 8px; background:var(--dark); flex-shrink:0; }
+  .search-box { display:flex; align-items:center; background:rgba(255,255,255,0.1); border-radius:12px; padding:0 14px; border:1.5px solid rgba(255,255,255,0.08); transition:border-color 0.2s; }
+  .search-box:focus-within { border-color:var(--taupe); background:rgba(255,255,255,0.15); }
+  .search-icon { font-size:15px; opacity:0.5; flex-shrink:0; }
+  .search-input { flex:1; border:none; outline:none; padding:11px 10px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--sand); background:transparent; }
+  .search-input::placeholder { color:rgba(245,236,215,0.4); }
+  .search-clear { background:none; border:none; cursor:pointer; font-size:18px; color:var(--taupe); display:none; padding:4px; }
+
+  /* CHIPS */
+  .chips-wrap { padding:8px 14px; display:flex; gap:7px; overflow-x:auto; flex-shrink:0; scrollbar-width:none; background:var(--dark); border-bottom:1px solid rgba(255,255,255,0.06); }
+  .chips-wrap::-webkit-scrollbar { display:none; }
+  .chip { display:flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; border:1.5px solid rgba(196,168,130,0.35); background:transparent; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; color:var(--taupe); cursor:pointer; white-space:nowrap; transition:all 0.18s; flex-shrink:0; }
+  .chip.active { background:var(--taupe); border-color:var(--taupe); color:var(--dark); }
+  .chip-icon { font-size:13px; }
+
+  /* MAIN */
+  .main { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+
+  /* MAP */
+  .map-container { flex:1; position:relative; overflow:hidden; background:#1a2a20; cursor:grab; touch-action:none; }
+  .map-container:active { cursor:grabbing; }
+
+  .map-inner {
+    position:absolute; top:0; left:0;
+    transform-origin:0 0;
+    will-change:transform;
+  }
+  .map-img {
+    display:block;
+    width:900px;
+    height:auto;
+    user-select:none;
+    pointer-events:none;
+  }
+  .poi-layer {
+    position:absolute; top:0; left:0;
+    width:900px;
+    pointer-events:none;
+  }
+
+  /* POI markers */
+  .poi {
+    position:absolute;
+    transform:translate(-50%,-50%);
+    pointer-events:all;
+    cursor:pointer;
+    transition:transform 0.15s;
+    z-index:10;
+  }
+  .poi:hover { transform:translate(-50%,-50%) scale(1.2); }
+  .poi.selected { transform:translate(-50%,-50%) scale(1.3); z-index:20; }
+
+  .poi-dot {
+    width:28px; height:28px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+    border:2px solid rgba(255,255,255,0.8);
+    transition:all 0.15s;
+    position:relative;
+  }
+  .poi.selected .poi-dot {
+    width:34px; height:34px; font-size:16px;
+    box-shadow:0 0 0 4px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .poi-label {
+    position:absolute;
+    top:calc(100% + 3px);
+    left:50%; transform:translateX(-50%);
+    background:rgba(28,26,24,0.85);
+    color:var(--sand);
+    font-size:8.5px; font-weight:500;
+    padding:2px 5px;
+    border-radius:4px;
+    white-space:nowrap;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.15s;
+    letter-spacing:0.03em;
+  }
+  .poi:hover .poi-label, .poi.selected .poi-label { opacity:1; }
+
+  /* Route */
+  .route-svg { position:absolute; top:0; left:0; width:900px; pointer-events:none; z-index:5; }
+  .route-line { stroke:#e05555; stroke-width:3.5; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:10 6; animation:dash 1.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset:-32; } }
+  .route-head { fill:#e05555; }
+
+  /* User dot */
+  .user-dot {
+    position:absolute;
+    width:20px; height:20px;
+    transform:translate(-50%,-50%);
+    z-index:15;
+    pointer-events:none;
+  }
+  .user-ring { position:absolute; inset:-8px; border-radius:50%; background:rgba(122,46,60,0.2); animation:user-pulse 2s infinite; }
+  @keyframes user-pulse { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.5);opacity:0.1} }
+  .user-inner { position:absolute; inset:0; border-radius:50%; background:var(--burgundy); border:3px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+
+  /* Map controls */
+  .map-controls { position:absolute; right:12px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:30; }
+  .map-btn { width:40px; height:40px; border-radius:10px; background:rgba(28,26,24,0.85); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.12); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--sand); transition:background 0.15s; }
+  .map-btn:active { background:var(--taupe-dark); }
+
+  /* Walk badge */
+  .walk-badge { position:absolute; bottom:68px; left:50%; transform:translateX(-50%); background:var(--burgundy); color:#fff; padding:7px 18px; border-radius:20px; font-size:12px; font-weight:500; display:none; align-items:center; gap:6px; box-shadow:var(--shadow-sm); z-index:30; white-space:nowrap; }
+  .walk-badge.show { display:flex; }
+
+  /* From tag */
+  .from-tag { position:absolute; top:12px; left:12px; background:rgba(28,26,24,0.82); backdrop-filter:blur(8px); border:1px solid rgba(196,168,130,0.25); border-radius:10px; padding:7px 12px; display:flex; align-items:center; gap:7px; font-size:10px; color:var(--taupe); font-weight:500; letter-spacing:0.04em; z-index:30; }
+
+  /* Results */
+  .results-panel { background:var(--dark); flex-shrink:0; max-height:42vh; overflow-y:auto; display:none; border-top:1px solid rgba(255,255,255,0.06); }
+  .results-panel.open { display:block; }
+  .result-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition:background 0.12s; }
+  .result-item:active { background:rgba(255,255,255,0.05); }
+  .result-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .result-info { flex:1; }
+  .result-name { font-size:13px; font-weight:500; color:var(--sand); }
+  .result-cat { font-size:11px; color:var(--text-muted); margin-top:1px; }
+  .result-dist { font-size:12px; color:var(--taupe); font-weight:500; flex-shrink:0; }
+
+  /* Bottom panel */
+  .bottom-panel { background:var(--dark); border-radius:20px 20px 0 0; box-shadow:0 -4px 30px rgba(0,0,0,0.4); padding:0 20px 28px; flex-shrink:0; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.25,0.8,0.25,1); max-height:55vh; overflow-y:auto; position:relative; z-index:50; border-top:1px solid rgba(196,168,130,0.2); }
+  .bottom-panel.open { transform:translateY(0); }
+  .panel-handle { width:36px; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; margin:12px auto 16px; }
+  .poi-detail-header { display:flex; align-items:flex-start; gap:14px; margin-bottom:12px; }
+  .poi-detail-icon { width:50px; height:50px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+  .poi-detail-name { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; color:var(--sand); line-height:1.2; }
+  .poi-detail-num { font-size:10px; color:var(--taupe); letter-spacing:0.1em; text-transform:uppercase; margin-top:2px; font-weight:500; }
+  .poi-detail-desc { font-size:13px; color:var(--text-muted); line-height:1.6; margin-bottom:14px; }
+  .poi-meta { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .poi-tag { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:5px 10px; font-size:11px; color:var(--taupe); font-weight:500; }
+  .nav-btn { width:100%; padding:14px; background:var(--burgundy); color:white; border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; letter-spacing:0.04em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.18s; }
+  .nav-btn.done { background:#2D6A4F; }
+  .nav-btn:active { opacity:0.85; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(28,26,24,0.95); color:var(--sand); padding:10px 20px; border-radius:30px; font-size:13px; font-weight:500; opacity:0; pointer-events:none; transition:opacity 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(196,168,130,0.2); }
+  .toast.show { opacity:1; }
+
+  /* Legend toggle */
+  .legend-btn { position:absolute; top:12px; right:12px; background:rgba(28,26,24,0.85); border:1px solid rgba(196,168,130,0.25); color:var(--taupe); font-size:11px; font-weight:500; border-radius:10px; padding:7px 11px; cursor:pointer; z-index:30; letter-spacing:0.04em; }
+  .legend-panel { position:absolute; top:44px; right:12px; background:rgba(22,20,18,0.96); backdrop-filter:blur(12px); border:1px solid rgba(196,168,130,0.2); border-radius:12px; padding:12px 14px; z-index:40; max-width:200px; display:none; }
+  .legend-panel.open { display:block; }
+  .legend-item { display:flex; align-items:center; gap:8px; margin-bottom:7px; font-size:11px; color:var(--sand); }
+  .legend-dot { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,0.6); flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo-main">Impressive Punta Cana</div>
+    <div class="logo-sub">Resort Navigator · Mapa Interactivo</div>
+  </div>
+  <div class="header-badge">
+    <div class="badge-dot"></div>
+    <span class="badge-text">34 POIs</span>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" placeholder="Buscar: piscina, restaurante, spa…" autocomplete="off">
+    <button class="search-clear" id="searchClear">×</button>
+  </div>
+</div>
+
+<div class="chips-wrap" id="chips">
+  <button class="chip active" data-cat="all"><span class="chip-icon">🗺️</span>Todo</button>
+  <button class="chip" data-cat="pool"><span class="chip-icon">🏊</span>Piscinas</button>
+  <button class="chip" data-cat="food"><span class="chip-icon">🍽️</span>Restaurantes</button>
+  <button class="chip" data-cat="bar"><span class="chip-icon">🍹</span>Bares</button>
+  <button class="chip" data-cat="beach"><span class="chip-icon">🏖️</span>Playa</button>
+  <button class="chip" data-cat="spa"><span class="chip-icon">💆</span>Spa</button>
+  <button class="chip" data-cat="shop"><span class="chip-icon">🛍️</span>Tiendas</button>
+  <button class="chip" data-cat="service"><span class="chip-icon">🛎️</span>Servicios</button>
+  <button class="chip" data-cat="entertain"><span class="chip-icon">🎭</span>Ocio</button>
+</div>
+
+<div class="results-panel" id="resultsPanel"></div>
+
+<div class="main">
+  <div class="map-container" id="mapContainer">
+    <div class="map-inner" id="mapInner">
+
+      <!-- REAL MAP IMAGE -->
+      <img class="map-img" id="mapImg"
+        src="/mnt/user-data/uploads/1773306268696_Impressive_Mapa_-_Map__5___1_.png"
+        alt="Mapa Impressive Punta Cana">
+
+      <!-- ROUTE SVG -->
+      <svg class="route-svg" id="routeSvg" style="height:700px; display:none;">
+        <defs>
+          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <polygon points="0 0, 6 3, 0 6" class="route-head"/>
+          </marker>
+        </defs>
+        <path id="routePath" class="route-line" marker-end="url(#arrowhead)"/>
+      </svg>
+
+      <!-- USER POSITION -->
+      <div class="user-dot" id="userDot" style="left:220px; top:490px;">
+        <div class="user-ring"></div>
+        <div class="user-inner"></div>
+      </div>
+
+      <!-- POI LAYER -->
+      <div class="poi-layer" id="poiLayer" style="height:700px;"></div>
+    </div>
+
+    <!-- UI overlays -->
+    <div class="from-tag">📍 <span id="fromLabel">Lobby · Recepción Principal</span></div>
+    <button class="legend-btn" id="legendBtn">Leyenda ▾</button>
+    <div class="legend-panel" id="legendPanel">
+      <div class="legend-item"><div class="legend-dot" style="background:#1A7A8A"></div>Piscinas</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7A2E3C"></div>Restaurantes</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4A882"></div>Bares</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D4A842"></div>Tiendas</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#5A7A2E"></div>Playa</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8A4A8A"></div>Spa & Wellness</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3A6A9A"></div>Servicios</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8A6A3A"></div>Ocio</div>
+    </div>
+    <div class="walk-badge" id="walkBadge">🚶 <span id="walkTime">3 min</span> caminando</div>
+    <div class="map-controls">
+      <button class="map-btn" id="btnZoomIn">＋</button>
+      <button class="map-btn" id="btnZoomOut">－</button>
+      <button class="map-btn" id="btnCenter" title="Mi posición">⊙</button>
+    </div>
+  </div>
+
+  <div class="bottom-panel" id="bottomPanel">
+    <div class="panel-handle"></div>
+    <div id="panelContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── POI DATA — coordenadas calibradas sobre imagen 900px ancho ──────────
+// Posiciones estimadas pixel a pixel desde el mapa real
+const POIS = [
+  // ENTRADA / RECEPCIÓN
+  { id:1,  num:'①',  cat:'service', name:'Entrada Principal',            en:'Entrance',                  icon:'🚪', color:'#3A6A9A', x:210, y:490, walk:0,  desc:'Acceso principal al resort. Punto de referencia central para orientarse.', tags:['Abierta 24h','Traslados','Taxi resort'] },
+  { id:2,  num:'②',  cat:'service', name:'Recepción · Dominican Bar',    en:'Reception & Dominican Bar', icon:'🛎️', color:'#3A6A9A', x:228, y:472, walk:1,  desc:'Recepción principal del hotel y bar temático dominicano. Check-in/out y asistencia 24h.', tags:['24h','Check-in/out','Concierge'] },
+  { id:3,  num:'③',  cat:'service', name:'Recepción Premium',            en:'Premium Reception',         icon:'⭐', color:'#3A6A9A', x:248, y:460, walk:2,  desc:'Recepción exclusiva para huéspedes de la zona Premium con servicio de mayordomo.', tags:['Solo Premium','Mayordomo','Check-in exprés'] },
+  { id:4,  num:'④',  cat:'bar',     name:'Salón Premium · Diamond Bar',  en:'Diamond Bar & Butler Zone', icon:'💎', color:'#C4A882', x:178, y:295, walk:4,  desc:'Lounge exclusivo con bar premium y zona de mayordomos para huéspedes Diamond.', tags:['Solo huéspedes Diamond','Cócteles premium','10am–12am'] },
+  { id:5,  num:'⑤',  cat:'bar',     name:'Aquamarine Pool Bar',          en:'Pool Bar Aquamarine',       icon:'🍹', color:'#C4A882', x:248, y:330, walk:3,  desc:'Bar junto a la piscina Premium con cócteles tropicales y bebidas del todo incluido.', tags:['9am–7pm','All-inclusive','Frente a piscina'] },
+  { id:6,  num:'⑥',  cat:'food',    name:'Open Sea Buffet Internacional',en:'Open Sea Buffet',           icon:'🥗', color:'#7A2E3C', x:258, y:460, walk:2,  desc:'Gran buffet con cocinas del mundo: asiática, mediterránea, caribeña e italiana.', tags:['Todo el día 7am–11pm','All-inclusive','Family friendly'] },
+  { id:7,  num:'⑦',  cat:'food',    name:'Yakimeshi · Rest. Japonés',   en:'Japanese Restaurant',       icon:'🍱', color:'#7A2E3C', x:252, y:430, walk:3,  desc:'Restaurante japonés con teppanyaki, sushi y especialidades asiáticas. Reserva recomendada.', tags:['Cena 6:30–10pm','Reserva requerida','Dress code casual'] },
+  { id:8,  num:'⑧',  cat:'bar',     name:'Amber Lobby Bar · Premium',   en:'Amber Lobby Bar',           icon:'🥃', color:'#C4A882', x:230, y:495, walk:1,  desc:'Bar premium en el lobby con selección de whiskies, ron artesanal dominicano y coctelería clásica.', tags:['12pm–1am','Música en vivo','Dress code casual'] },
+  { id:9,  num:'⑨',  cat:'service', name:'Conference Rooms',            en:'Salones de Conferencia',    icon:'💼', color:'#3A6A9A', x:242, y:520, walk:2,  desc:'Salones equipados para reuniones de empresa, bodas y eventos privados.', tags:['Reserva previa','Catering disponible','AV incluido'] },
+  { id:10, num:'⑩',  cat:'entertain',name:'Teatro',                     en:'Theater',                   icon:'🎭', color:'#8A6A3A', x:252, y:540, walk:3,  desc:'Teatro con capacidad para 400 personas. Shows nocturnos, música en vivo y espectáculos temáticos.', tags:['Shows 9:30pm diario','Capacidad 400','Sin reserva'] },
+  { id:11, num:'⑪',  cat:'bar',     name:'Palm Coffee Shop · Sports Bar',en:'Coffee & Sports Bar',      icon:'☕', color:'#C4A882', x:285, y:570, walk:4,  desc:'Cafetería y sports bar con pantallas gigantes, snacks y café de especialidad.', tags:['7am–11pm','Retransmisiones deportivas','Snacks'] },
+  // RESTAURANTES
+  { id:12, num:'⑫',  cat:'food',    name:'Snack Time · Pizza & Tapas',  en:'Snack Time Pizza',          icon:'🍕', color:'#7A2E3C', x:538, y:370, walk:6,  desc:'Snack bar con pizzas artesanales y tapas. Perfecto para un bocado rápido junto a la piscina.', tags:['11am–7pm','Sin reserva','Playa cercana'] },
+  { id:13, num:'⑬',  cat:'bar',     name:'Tourmaline Beach Bar',        en:'Beach Bar (Renovated)',     icon:'🏖️', color:'#C4A882', x:580, y:390, walk:7,  desc:'Beach bar renovado frente al mar con cócteles tropicales y música ambiente. RENOVADO 2024.', tags:['10am–10pm','Renovado 2024','Frente al mar'] },
+  { id:14, num:'⑭',  cat:'food',    name:'On the Grill · Steakhouse',   en:'Steakhouse',                icon:'🥩', color:'#7A2E3C', x:590, y:415, walk:8,  desc:'Restaurante de carnes a la brasa con cortes premium y vista al jardín tropical.', tags:['Cena 6:30–10pm','Reserva recomendada','Dress code'] },
+  { id:15, num:'⑮',  cat:'food',    name:'Alebrije · Rest. Mexicano',   en:'Mexican Restaurant',        icon:'🌮', color:'#7A2E3C', x:572, y:435, walk:7,  desc:'Cocina mexicana auténtica con tacos, guacamole, margaritas y sabores del Pacífico.', tags:['Cena 6:30–10pm','Reserva requerida','Veggie options'] },
+  { id:16, num:'⑯',  cat:'bar',     name:'Vino a la Carta · Wine Bar',  en:'Wine a la Carte',           icon:'🍷', color:'#C4A882', x:574, y:390, walk:7,  desc:'Selección de vinos internacionales y tapas gourmet en ambiente íntimo y sofisticado.', tags:['5pm–12am','Carta de vinos premium','Reserva recomendada'] },
+  { id:17, num:'⑰',  cat:'food',    name:'Villa Magna · Italiano',      en:'Italian Restaurant',        icon:'🍝', color:'#7A2E3C', x:580, y:360, walk:8,  desc:'Auténtica cocina italiana con pastas frescas, risottos y pizzas de horno de leña.', tags:['Cena 6:30–10pm','Reserva requerida','Romántico'] },
+  { id:18, num:'⑱',  cat:'bar',     name:'Turquoise Pool Bar',          en:'Pool Bar Turquoise',        icon:'🍹', color:'#C4A882', x:578, y:415, walk:7,  desc:'Bar flotante junto a la piscina turquesa con cócteles signature y ambiente tropical.', tags:['9am–7pm','Cócteles signature','All-inclusive'] },
+  { id:19, num:'⑲',  cat:'bar',     name:'Palapa The Lake',             en:'Palapa The Lake',           icon:'🌴', color:'#C4A882', x:350, y:418, walk:5,  desc:'Bar palapa sobre el lago artificial con ambiente caribeño y vistas al jardín.', tags:['10am–8pm','Cócteles tropicales','Vistas al lago'] },
+  { id:20, num:'⑳',  cat:'spa',     name:'Feel Impressive Spa & Wellness',en:'Spa & Wellness',          icon:'💆', color:'#8A4A8A', x:418, y:335, walk:5,  desc:'Spa de lujo con masajes, aromaterapia, envolturas tropicales, sauna y hammam.', tags:['9am–8pm','Reserva requerida','Acceso hammam incluido'] },
+  { id:21, num:'㉑',  cat:'bar',     name:'Jade Bar',                   en:'Jade Bar',                  icon:'🍸', color:'#C4A882', x:432, y:238, walk:6,  desc:'Bar moderno con coctelería de autor y ambiente nocturno junto a la piscina Relax.', tags:['4pm–1am','Cócteles de autor','Música ambiente'] },
+  { id:22, num:'㉒',  cat:'food',    name:'Olive Tree · Mediterráneo',  en:'Mediterranean Restaurant',  icon:'🫒', color:'#7A2E3C', x:415, y:218, walk:6,  desc:'Cocina mediterránea con tapas, pescados frescos, hummus y especialidades griegas.', tags:['Cena 6:30–10pm','Reserva requerida','Vista piscina'] },
+  { id:23, num:'㉓',  cat:'entertain',name:"Club de Niños · Kid's Club",en:"Game & Fun Kid's Club",     icon:'🎪', color:'#8A6A3A', x:132, y:460, walk:3,  desc:'Mini club infantil con animadores, talleres creativos, videojuegos y actividades supervisadas.', tags:['4–12 años','9am–6pm','Sin cargo extra'] },
+  { id:24, num:'㉔',  cat:'entertain',name:'Gimnasio',                  en:'Gym & Fitness',             icon:'💪', color:'#8A6A3A', x:625, y:480, walk:8,  desc:'Gimnasio con equipamiento moderno: cardio, pesas y clases grupales de yoga y pilates.', tags:['6am–10pm','Clases grupales','Trainer disponible'] },
+  { id:25, num:'㉕',  cat:'entertain',name:'Área de Juegos · Play Area',en:'Play Area',                 icon:'🎡', color:'#8A6A3A', x:605, y:488, walk:8,  desc:'Zona de juegos al aire libre para niños con toboganes y actividades recreativas.', tags:['Supervisado','8am–6pm','Gratis'] },
+  { id:26, num:'㉖',  cat:'entertain',name:'Club de Adolescentes',      en:'Teens Play Room',           icon:'🎮', color:'#8A6A3A', x:618, y:545, walk:9,  desc:'Sala de juegos y actividades exclusiva para jóvenes de 13-17 años.', tags:['13–17 años','10am–10pm','Videojuegos & pool'] },
+  { id:27, num:'㉗',  cat:'entertain',name:'Discoteca Ópalo',           en:'Ópalo Nightclub',           icon:'🪩', color:'#8A6A3A', x:235, y:490, walk:1,  desc:'Club nocturno con DJ residente, pista de baile y ambiente festivo caribeño.', tags:['11pm–3am','Dress code','Mayores de 18'] },
+  { id:28, num:'㉘',  cat:'entertain',name:'Palapa',                    en:'Palapa Lounge',             icon:'🌴', color:'#8A6A3A', x:247, y:488, walk:1,  desc:'Palapa lounge abierta para cócteles, música en vivo y relajarse bajo el sol.', tags:['Todo el día','Música en vivo jue-sáb','Sin reserva'] },
+  { id:29, num:'㉙',  cat:'entertain',name:'Jardín The Lake',           en:'The Lake Garden',           icon:'🌿', color:'#5A7A2E', x:332, y:418, walk:5,  desc:'Jardín botánico alrededor del lago artificial con palmeras y flora caribeña.', tags:['Acceso libre','Fotos increíbles','Tranquilo'] },
+  { id:30, num:'㉚',  cat:'entertain',name:'Gazebo Playa Bodas',        en:'Beach Wedding Gazebo',      icon:'💒', color:'#8A6A3A', x:652, y:308, walk:9,  desc:'Gazebo frente al mar para bodas y celebraciones en la playa. Vista panorámica del Caribe.', tags:['Reserva requerida','Bodas & eventos','Frente al mar'] },
+  { id:31, num:'㉛',  cat:'entertain',name:'Salón de Bodas',            en:'Wedding Room',              icon:'💐', color:'#8A6A3A', x:350, y:468, walk:5,  desc:'Salón elegante para ceremonias civiles y celebraciones de bodas con capacidad para 200 invitados.', tags:['Eventos privados','Catering incluible','Reserva previa'] },
+  { id:32, num:'㉜',  cat:'beach',   name:'Playa Premium · Maritin\'s Bar',en:'Premium Beach & Bar',   icon:'⭐', color:'#5A7A2E', x:660, y:220, walk:9,  desc:'Playa exclusiva Premium con tumbonas reservadas, servicio de barra y zona de parasoles. NUEVO 2024.', tags:['Solo Premium/Royal','Nuevo 2024','Servicio en mesa'] },
+  { id:33, num:'㉝',  cat:'beach',   name:'Playa Villas · Beach Villas', en:'Beach Villas',             icon:'🏡', color:'#5A7A2E', x:666, y:388, walk:10, desc:'Zona de playa privada para huéspedes de las Beach Villas con acceso directo al mar.', tags:['Solo villas','Acceso privado','Tumbonas reservadas'] },
+  { id:34, num:'㉞',  cat:'beach',   name:'Playa Punta Cana',           en:'Punta Cana Beach',          icon:'🏖️', color:'#5A7A2E', x:660, y:538, walk:10, desc:'800m de playa de arena blanca del Mar Caribe con deportes acuáticos y chiringuitos.', tags:['Acceso libre','Toallas incluidas','Deportes acuáticos'] },
+
+  // PISCINAS (letras A-D)
+  { id:'A', num:'A', cat:'pool',   name:'Piscina Premium',             en:'Premium Pool',              icon:'🏊', color:'#1A7A8A', x:312, y:298, walk:4,  desc:'Piscina exclusiva Premium con agua turquesa, bar flotante y zona de jacuzzi.', tags:['Solo Premium/Royal','8am–7pm','Bar flotante'] },
+  { id:'B', num:'B', cat:'pool',   name:'Piscina Relax',               en:'Relax Pool',                icon:'🧘', color:'#1A7A8A', x:455, y:218, walk:6,  desc:'Piscina tranquila para adultos, sin música ni niños. Ambiente zen y relajante.', tags:['Solo adultos +16','8am–7pm','Zona silenciosa'] },
+  { id:'C', num:'C', cat:'pool',   name:'Piscina Familiar',            en:'Family Pool',               icon:'👨‍👩‍👧', color:'#1A7A8A', x:430, y:358, walk:5,  desc:'Piscina familiar con zona infantil, toboganes y animación durante el día.', tags:['Toda la familia','8am–7pm','Toboganes','Animación'] },
+  { id:'D', num:'D', cat:'pool',   name:'Beach Pool · Piscinade Playa',en:'Beach Pool',                icon:'🌊', color:'#1A7A8A', x:618, y:455, walk:9,  desc:'Piscina junto a la playa con transición directa al mar. La más cercana al Caribe.', tags:['8am–7pm','Vistas al mar','Tumbonas gratis'] },
+
+  // TIENDAS (letras E-K)
+  { id:'E', num:'E', cat:'shop',   name:'Impressive Shop · Tienda',    en:'Impressive Shop',           icon:'🛍️', color:'#D4A842', x:253, y:456, walk:2,  desc:'Tienda principal con souvenirs, ropa de resort, artesanía dominicana y artículos de playa.', tags:['9am–9pm','Artesanía local','Moneda y tarjeta'] },
+  { id:'F', num:'F', cat:'shop',   name:'Memories Shop · Tienda',      en:'Memories Shop',             icon:'🎁', color:'#D4A842', x:262, y:466, walk:2,  desc:'Tienda de recuerdos y regalos con productos exclusivos del resort.', tags:['9am–9pm','Envío internacional','Exclusivo resort'] },
+  { id:'G', num:'G', cat:'shop',   name:'Coral Shop · Tienda',         en:'Coral Shop',                icon:'🐚', color:'#D4A842', x:285, y:578, walk:5,  desc:'Tienda de artículos de playa, protectores solares, snorkel y accesorios de mar.', tags:['8am–8pm','Artículos de playa','Snorkel y aletas'] },
+  { id:'H', num:'H', cat:'shop',   name:'Cana Shop · Tienda',          en:'Cana Shop',                 icon:'🌺', color:'#D4A842', x:318, y:590, walk:5,  desc:'Tienda especializada en ron dominicano, habanos y productos locales del Caribe.', tags:['9am–9pm','Ron premium','Habanos'] },
+  { id:'I', num:'I', cat:'shop',   name:"Maritin's Shop · Tienda",     en:"Maritin's Shop",            icon:'🏄', color:'#D4A842', x:658, y:238, walk:9,  desc:'Tienda de artículos premium junto a la playa exclusiva con artículos de lujo y souvenirs.', tags:['Solo zona Premium','9am–7pm'] },
+  { id:'J', num:'J', cat:'service',name:'Vacation Club',               en:'Vacation Club',             icon:'🏆', color:'#3A6A9A', x:380, y:490, walk:5,  desc:'Oficina del club de vacaciones con información sobre membresías y programas exclusivos.', tags:['10am–6pm','Información membresías','Sin compromiso'] },
+  { id:'K', num:'K', cat:'service',name:'Beach Pier · Muelle',         en:'Beach Pier',                icon:'⚓', color:'#3A6A9A', x:712, y:408, walk:11, desc:'Muelle de playa para excursiones marítimas, catamaran y actividades acuáticas motorizadas.', tags:['8am–5pm','Excursiones','Deportes acuáticos'] },
+];
+
+// User starts at Lobby (Reception area)
+const USER = { x: 228, y: 472 };
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let activeCat = 'all';
+let selectedPoi = null;
+let scale = 1, panX = 0, panY = 0;
+let isPanning = false, startX, startY, startPanX, startPanY;
+let lastPinchDist = 0;
+
+// ─── RENDER POIS ─────────────────────────────────────────────────────────
+function renderPois(catFilter='all', query='') {
+  const layer = document.getElementById('poiLayer');
+  layer.innerHTML = '';
+  POIS.forEach(poi => {
+    if (catFilter !== 'all' && poi.cat !== catFilter) return;
+    if (query && !poi.name.toLowerCase().includes(query.toLowerCase()) &&
+        !poi.en.toLowerCase().includes(query.toLowerCase())) return;
+
+    const el = document.createElement('div');
+    el.className = 'poi' + (selectedPoi?.id === poi.id ? ' selected' : '');
+    el.style.left = poi.x + 'px';
+    el.style.top = poi.y + 'px';
+
+    el.innerHTML = `
+      <div class="poi-dot" style="background:${poi.color}20; border-color:${poi.color}; color:${poi.color}">
+        <span style="font-size:11px">${poi.icon}</span>
+      </div>
+      <div class="poi-label">${poi.num} ${poi.name}</div>
+    `;
+    el.addEventListener('click', (e) => { e.stopPropagation(); selectPoi(poi); });
+    layer.appendChild(el);
+  });
+}
+
+// ─── SELECT & PANEL ──────────────────────────────────────────────────────
+function selectPoi(poi) {
+  selectedPoi = poi;
+  document.getElementById('routeSvg').style.display = 'none';
+  document.getElementById('walkBadge').classList.remove('show');
+  renderPois(activeCat, document.getElementById('searchInput').value);
+  showPanel(poi);
+  closeResults();
+  // Pan map to center on POI
+  centerOnPoi(poi);
+}
+
+function centerOnPoi(poi) {
+  const cont = document.getElementById('mapContainer');
+  const cw = cont.clientWidth, ch = cont.clientHeight;
+  panX = cw/2 - poi.x * scale;
+  panY = ch/2 - poi.y * scale;
+  applyTransform();
+}
+
+function showPanel(poi) {
+  const panel = document.getElementById('bottomPanel');
+  document.getElementById('panelContent').innerHTML = `
+    <div class="poi-detail-header">
+      <div class="poi-detail-icon" style="background:${poi.color}20">${poi.icon}</div>
+      <div>
+        <div class="poi-detail-name">${poi.name}</div>
+        <div class="poi-detail-num">${catLabel(poi.cat)} · Punto ${poi.num}</div>
+      </div>
+    </div>
+    <p class="poi-detail-desc">${poi.desc}</p>
+    <div class="poi-meta">${poi.tags.map(t=>`<div class="poi-tag">• ${t}</div>`).join('')}</div>
+    <button class="nav-btn" id="navBtn" onclick="startNav()">
+      🧭 Cómo llegar · ${poi.walk === 0 ? 'Estás aquí' : poi.walk + ' min a pie'}
+    </button>
+  `;
+  panel.classList.add('open');
+}
+
+function catLabel(c) {
+  return {pool:'Piscina',food:'Restaurante',bar:'Bar',beach:'Playa',spa:'Spa',shop:'Tienda',service:'Servicio',entertain:'Ocio'}[c]||c;
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────
+function startNav() {
+  if (!selectedPoi) return;
+  if (selectedPoi.walk === 0) { showToast('📍 ¡Ya estás aquí!'); return; }
+  drawRoute(USER.x, USER.y, selectedPoi.x, selectedPoi.y);
+  document.getElementById('walkBadge').classList.add('show');
+  document.getElementById('walkTime').textContent = selectedPoi.walk + ' min';
+  const btn = document.getElementById('navBtn');
+  if (btn) { btn.className = 'nav-btn done'; btn.textContent = '✓ Ruta activa · Sigue la línea roja'; }
+  showToast('🧭 Ruta activada — ¡Buen paseo!');
+}
+
+function drawRoute(x1,y1,x2,y2) {
+  const svg = document.getElementById('routeSvg');
+  svg.style.display = 'block';
+  // Simple path: go to nearest corridor then to destination
+  const path = document.getElementById('routePath');
+  const cx = x1 + (x2-x1)*0.45;
+  path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+}
+
+// ─── CATEGORIES ──────────────────────────────────────────────────────────
+document.getElementById('chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  activeCat = chip.dataset.cat;
+  selectedPoi = null;
+  document.getElementById('routeSvg').style.display = 'none';
+  document.getElementById('walkBadge').classList.remove('show');
+  document.getElementById('bottomPanel').classList.remove('open');
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  closeResults();
+  renderPois(activeCat, '');
+});
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.trim();
+  document.getElementById('searchClear').style.display = q ? 'block' : 'none';
+  if (q.length < 2) { closeResults(); renderPois(activeCat,''); return; }
+  const matches = POIS.filter(p =>
+    p.name.toLowerCase().includes(q.toLowerCase()) ||
+    p.en.toLowerCase().includes(q.toLowerCase()) ||
+    catLabel(p.cat).toLowerCase().includes(q.toLowerCase())
+  );
+  showResults(matches);
+  renderPois('all', q);
+});
+
+document.getElementById('searchClear').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  closeResults(); renderPois(activeCat,'');
+});
+
+function showResults(list) {
+  const panel = document.getElementById('resultsPanel');
+  if (!list.length) {
+    panel.innerHTML = `<div class="result-item"><div class="result-info"><div class="result-name" style="color:var(--text-muted)">Sin resultados. Prueba otro término.</div></div></div>`;
+    panel.classList.add('open'); return;
+  }
+  panel.innerHTML = list.map(p => `
+    <div class="result-item" onclick="pickResult('${p.id}')">
+      <div class="result-icon" style="background:${p.color}20">${p.icon}</div>
+      <div class="result-info">
+        <div class="result-name">${p.name}</div>
+        <div class="result-cat">${p.en} · ${catLabel(p.cat)}</div>
+      </div>
+      <div class="result-dist">${p.walk===0?'Aquí':p.walk+' min'}</div>
+    </div>
+  `).join('');
+  panel.classList.add('open');
+}
+
+function pickResult(id) {
+  const poi = POIS.find(p => String(p.id) === String(id));
+  if (!poi) return;
+  document.getElementById('searchInput').value = poi.name;
+  closeResults();
+  selectPoi(poi);
+}
+
+function closeResults() { document.getElementById('resultsPanel').classList.remove('open'); }
+
+// ─── LEGEND ──────────────────────────────────────────────────────────────
+document.getElementById('legendBtn').addEventListener('click', () => {
+  document.getElementById('legendPanel').classList.toggle('open');
+});
+
+// ─── CLOSE PANEL ─────────────────────────────────────────────────────────
+document.getElementById('mapContainer').addEventListener('click', e => {
+  if (!e.target.closest('.poi') && !e.target.closest('.from-tag') && !e.target.closest('.legend-btn') && !e.target.closest('.legend-panel') && !e.target.closest('.map-btn') && !e.target.closest('.walk-badge')) {
+    document.getElementById('bottomPanel').classList.remove('open');
+    document.getElementById('legendPanel').classList.remove('open');
+    selectedPoi = null;
+    document.getElementById('routeSvg').style.display = 'none';
+    document.getElementById('walkBadge').classList.remove('show');
+    renderPois(activeCat, document.getElementById('searchInput').value);
+  }
+});
+
+// ─── TRANSFORM ───────────────────────────────────────────────────────────
+function applyTransform() {
+  document.getElementById('mapInner').style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+}
+
+// Zoom buttons
+document.getElementById('btnZoomIn').addEventListener('click', () => { scale = Math.min(scale*1.3, 4); applyTransform(); });
+document.getElementById('btnZoomOut').addEventListener('click', () => { scale = Math.max(scale/1.3, 0.4); applyTransform(); });
+document.getElementById('btnCenter').addEventListener('click', () => {
+  scale=1; panX=0; panY=0; applyTransform();
+  showToast('📍 Vista completa del resort');
+});
+
+// Pan
+const mc = document.getElementById('mapContainer');
+mc.addEventListener('pointerdown', e => {
+  if (e.target.closest('.poi') || e.target.closest('.map-btn') || e.target.closest('.from-tag') || e.target.closest('.legend-btn') || e.target.closest('.legend-panel')) return;
+  isPanning = true; startX=e.clientX; startY=e.clientY; startPanX=panX; startPanY=panY;
+  mc.setPointerCapture(e.pointerId);
+});
+mc.addEventListener('pointermove', e => {
+  if (!isPanning) return;
+  panX = startPanX + (e.clientX-startX);
+  panY = startPanY + (e.clientY-startY);
+  applyTransform();
+});
+mc.addEventListener('pointerup', () => isPanning=false);
+
+// Pinch zoom
+mc.addEventListener('touchstart', e => {
+  if (e.touches.length===2) lastPinchDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+}, {passive:true});
+mc.addEventListener('touchmove', e => {
+  if (e.touches.length===2) {
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    scale = Math.min(Math.max(scale*(d/lastPinchDist),0.4),4);
+    lastPinchDist=d; applyTransform();
+  }
+}, {passive:true});
+
+// ─── TOAST ───────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────
+// Wait for image to load to get real dimensions
+const img = document.getElementById('mapImg');
+img.onload = () => {
+  // Set poi layer and route svg height to match image
+  const h = img.naturalHeight * (900 / img.naturalWidth);
+  document.getElementById('poiLayer').style.height = h + 'px';
+  document.getElementById('routeSvg').style.height = h + 'px';
+  document.getElementById('routeSvg').setAttribute('viewBox', `0 0 900 ${h}`);
+};
+
+renderPois('all','');
+setTimeout(()=>showToast('👋 Bienvenido · Toca cualquier punto para navegar'), 900);
+</script>
+</body>
+</html>
